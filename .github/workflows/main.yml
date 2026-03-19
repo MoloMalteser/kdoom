@@ -17,16 +17,21 @@ jobs:
       - name: Install ARMHF Toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-arm-linux-gnueabihf binutils-arm-linux-gnueabihf make autoconf automake libtool
-          # Hier biegen wir die Namen für FBInk gerade:
+          sudo apt-get install -y gcc-arm-linux-gnueabihf binutils-arm-linux-gnueabihf make autoconf automake libtool git
+          # Wir erstellen Symlinks, damit FBInk die Toolchain unter dem erwarteten Namen findet
           sudo ln -sf /usr/bin/arm-linux-gnueabihf-gcc /usr/bin/arm-kindlehf-linux-gnueabihf-gcc
           sudo ln -sf /usr/bin/arm-linux-gnueabihf-ar /usr/bin/arm-kindlehf-linux-gnueabihf-ar
           sudo ln -sf /usr/bin/arm-linux-gnueabihf-ld /usr/bin/arm-linux-gnueabihf-ld
+          sudo ln -sf /usr/bin/arm-linux-gnueabihf-strip /usr/bin/arm-kindlehf-linux-gnueabihf-strip
 
       - name: Build Doom
         run: |
-          # Wir erzwingen ARMHF und Kindle-Modus
-          make ARMHF=1 KIN=1
+          # Wir überschreiben die Variablen direkt beim Aufruf, um libevdev/FBInk zu zähmen
+          make ARMHF=1 KIN=1 \
+            CC=arm-linux-gnueabihf-gcc \
+            AR=arm-linux-gnueabihf-ar \
+            CROSS_COMPILE=arm-linux-gnueabihf- \
+            CROSS_TC=arm-linux-gnueabihf
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
