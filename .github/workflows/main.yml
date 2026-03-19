@@ -1,28 +1,13 @@
-name: Kindle armhf Doom Build
-on: [push, workflow_dispatch]
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive # Wichtig für Abhängigkeiten wie FBInk
-
-      - name: Install Toolchain
+      - name: Install and Rename Toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-arm-linux-gnueabihf make
+          sudo apt-get install -y gcc-arm-linux-gnueabihf binutils-arm-linux-gnueabihf
+          # Der Trick: Wir erstellen Aliase für die Namen, die FBInk erwartet
+          sudo ln -s /usr/bin/arm-linux-gnueabihf-gcc /usr/bin/arm-kindlehf-linux-gnueabihf-gcc
+          sudo ln -s /usr/bin/arm-linux-gnueabihf-ar /usr/bin/arm-kindlehf-linux-gnueabihf-ar
+          sudo ln -s /usr/bin/arm-linux-gnueabihf-ld /usr/bin/arm-kindlehf-linux-gnueabihf-ld
 
       - name: Compile
         run: |
-          # Wir nutzen den Cross-Compiler und setzen die ARMHF-Flagge
-          # Damit wird der "Illegal instruction" Fehler vermieden
-          make CC=arm-linux-gnueabihf-gcc ARMHF=1 KIN=1
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: kdoom-armhf
-          path: kdoom # Prüfe in deinem Repo, ob die Datei 'kdoom' oder 'fbdoom' heißt
+          # Jetzt findet FBInk seinen "arm-kindlehf..." Compiler!
+          make ARMHF=1 KIN=1
