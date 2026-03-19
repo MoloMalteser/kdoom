@@ -1,4 +1,4 @@
-name: Kindle-Doom-Build-Echte-Toolchain
+name: Kindle-Doom-Build-Fixed
 
 on:
   push:
@@ -21,23 +21,20 @@ jobs:
 
       - name: Download and Setup KOX Toolchain
         run: |
-          # Toolchain herunterladen
           wget https://github.com/koreader/koxtoolchain/releases/download/2025.05/kindlehf.tar.gz
-          
-          # Erstellen eines Zielverzeichnisses
           sudo mkdir -p /opt/x-tools
-          
-          # Entpacken (wir gehen davon aus, dass der Ordner 'arm-kindlehf-linux-gnueabihf' enthalten ist)
           sudo tar -xzf kindlehf.tar.gz -C /opt/x-tools
-          
-          # Den Pfad zu den Binaries finden und zum GITHUB_PATH hinzufügen
-          # Wir suchen nach dem 'bin' Verzeichnis unter /opt/x-tools
           echo "$(find /opt/x-tools -type d -name "bin" | head -n 1)" >> $GITHUB_PATH
+
+      - name: Fix Source Code Errors
+        run: |
+          # Ersetzt das falsche 'sprintf(stderr' durch das richtige 'fprintf(stderr'
+          sed -i 's/sprintf(stderr/fprintf(stderr/g' src/i_input_evdev.c
+          # Optional: Fix für Zeit-Warning in d_main.c (falls du sie sauber haben willst)
+          sed -i '1i #include <time.h>' src/d_main.c
 
       - name: Build Doom
         run: |
-          # Da die Toolchain jetzt im PATH ist, wird 'arm-kindlehf-linux-gnueabihf-gcc' gefunden.
-          # Wir übergeben die Namen explizit, damit FBInk nicht versucht, etwas anderes zu suchen.
           make ARMHF=1 KIN=1 \
             CROSS_COMPILE=arm-kindlehf-linux-gnueabihf- \
             CROSS_TC=arm-kindlehf-linux-gnueabihf \
@@ -48,7 +45,7 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: doom-kindle-pro
+          name: doom-kindle-final
           path: |
             kdoom
             fbdoom
