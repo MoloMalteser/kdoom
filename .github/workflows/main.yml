@@ -1,4 +1,4 @@
-name: Kindle-Doom-Build-ARMHF
+name: Kindle-Doom-Build-With-KOX
 
 on:
   push:
@@ -14,29 +14,34 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install ARMHF Toolchain
+      - name: Install Build Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-arm-linux-gnueabihf binutils-arm-linux-gnueabihf make autoconf automake libtool git
-          # Wir erstellen Symlinks, damit FBInk die Toolchain unter dem erwarteten Namen findet
-          sudo ln -sf /usr/bin/arm-linux-gnueabihf-gcc /usr/bin/arm-kindlehf-linux-gnueabihf-gcc
-          sudo ln -sf /usr/bin/arm-linux-gnueabihf-ar /usr/bin/arm-kindlehf-linux-gnueabihf-ar
-          sudo ln -sf /usr/bin/arm-linux-gnueabihf-ld /usr/bin/arm-linux-gnueabihf-ld
-          sudo ln -sf /usr/bin/arm-linux-gnueabihf-strip /usr/bin/arm-kindlehf-linux-gnueabihf-strip
+          sudo apt-get install -y make autoconf automake libtool wget tar git
+
+      - name: Download Pre-built KOX Toolchain
+        run: |
+          # Wir laden eine fertige ARM-Kindle-Toolchain (hf = hardfloat für neuere Kindles)
+          # Link-Beispiel (angepasst auf ein gängiges Release):
+          wget https://github.com/koreader/koxtoolchain/releases/download/2024.11/x86_64-pc-linux-gnu-arm-kindlehf-linux-gnueabihf.tar.xz
+          tar -xJf x86_64-pc-linux-gnu-arm-kindlehf-linux-gnueabihf.tar.xz
+          # Wir verschieben sie an einen festen Ort
+          sudo mv arm-kindlehf-linux-gnueabihf /opt/koxtoolchain
+          # Pfad zum Environment hinzufügen
+          echo "/opt/koxtoolchain/bin" >> $GITHUB_PATH
 
       - name: Build Doom
         run: |
-          # Wir überschreiben die Variablen direkt beim Aufruf, um libevdev/FBInk zu zähmen
+          # Jetzt existiert 'arm-kindlehf-linux-gnueabihf-gcc' wirklich im System!
+          # Wir müssen nur noch die Variablen an das Makefile übergeben.
           make ARMHF=1 KIN=1 \
-            CC=arm-linux-gnueabihf-gcc \
-            AR=arm-linux-gnueabihf-ar \
-            CROSS_COMPILE=arm-linux-gnueabihf- \
-            CROSS_TC=arm-linux-gnueabihf
+            CROSS_COMPILE=arm-kindlehf-linux-gnueabihf- \
+            CROSS_TC=arm-kindlehf-linux-gnueabihf
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: kdoom-bin-armhf
+          name: kdoom-pro-bin
           path: |
             kdoom
             fbdoom
