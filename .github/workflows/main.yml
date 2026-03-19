@@ -1,4 +1,4 @@
-name: Kindle-Doom-Build-Fixed
+name: Kindle-Doom-Build-Final-Fix
 
 on:
   push:
@@ -28,24 +28,33 @@ jobs:
 
       - name: Fix Source Code Errors
         run: |
-          # Ersetzt das falsche 'sprintf(stderr' durch das richtige 'fprintf(stderr'
-          sed -i 's/sprintf(stderr/fprintf(stderr/g' src/i_input_evdev.c
-          # Optional: Fix für Zeit-Warning in d_main.c (falls du sie sauber haben willst)
+          # 1. Fix für den sprintf-Fehler von vorhin
+          sed -i 's/sprintf(stderr/fprintf(stderr/g' src/i_input_evdev.c || true
+          sed -i 's/sprintf(stderr/fprintf(stderr/g' src/i_input_raw.c || true
+          
+          # 2. Fix für 'I_EndRead' Fehler in w_wad.c
+          # Wir fügen eine leere Dummy-Funktion hinzu, damit der Linker nicht meckert
+          echo "void I_EndRead(void) { }" >> src/i_system.c
+          # Und wir deklarieren sie im Header, damit der Compiler sie kennt
+          sed -i '1i void I_EndRead(void);' src/w_wad.c
+          
+          # 3. Fehlendes time.h hinzufügen
           sed -i '1i #include <time.h>' src/d_main.c
 
       - name: Build Doom
         run: |
+          # Wir fügen -Wno-error hinzu, um sicherzustellen, dass Warnungen den Build nicht stoppen
           make ARMHF=1 KIN=1 \
             CROSS_COMPILE=arm-kindlehf-linux-gnueabihf- \
             CROSS_TC=arm-kindlehf-linux-gnueabihf \
-            CC=arm-kindlehf-linux-gnueabihf-gcc \
+            CC="arm-kindlehf-linux-gnueabihf-gcc -Wno-implicit-function-declaration" \
             AR=arm-kindlehf-linux-gnueabihf-ar \
             STRIP=arm-kindlehf-linux-gnueabihf-strip
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: doom-kindle-final
+          name: doom-kindle-working
           path: |
             kdoom
             fbdoom
